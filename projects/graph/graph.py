@@ -2,6 +2,8 @@
 Simple graph implementation
 """
 from util import Stack, Queue  # These may come in handy
+global visited 
+visited = set()
 
 class Graph:
     """Represent a graph as a dictionary of vertices mapping labels to edges."""
@@ -74,7 +76,13 @@ class Graph:
         beginning from starting_vertex.
         This should be done using recursion.
         """
-        pass  # TODO
+        global visited
+
+        if starting_vertex not in visited:
+            visited.add(starting_vertex)
+            print(starting_vertex)
+            for neighbor in self.vertices[starting_vertex]:
+                self.dft_recursive(neighbor)
     
     def bfs(self, starting_vertex, destination_vertex):
         """
