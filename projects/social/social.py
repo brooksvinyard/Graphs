@@ -1,4 +1,21 @@
+import random
+def fisher_yates_shuffle(l):
+    for i in range(0, len(l)):
+        random_index = random.randint(0, len(l) - 1)
+        l[random_index], l[i] = l[i], l[random_index]
 
+class Queue():
+    def __init__(self):
+        self.queue = []
+    def enqueue(self, value):
+        self.queue.append(value)
+    def dequeue(self):
+        if self.size() > 0:
+            return self.queue.pop(0)
+        else:
+            return None
+    def size(self):
+        return len(self.queue)
 
 class User:
     def __init__(self, name):
@@ -47,8 +64,28 @@ class SocialGraph:
         # !!!! IMPLEMENT ME
 
         # Add users
+        for i in range(numUsers): 
+            self.addUser(i)
 
         # Create friendships
+        # make a list of all possible friend combinations
+        all_combos = []
+        for x in range(1, numUsers + 1):
+            for y in range(x, numUsers + 1):
+                if x is not y:
+                    all_combos.append([x, y])
+
+        # Shuffle the list
+        fisher_yates_shuffle(all_combos)
+
+        # The total number of friendships needs to be numUsers * avgFriendships
+        total_friendships = numUsers * avgFriendships
+
+        # Narrow the all_combos list to number of total_friendships
+        all_combos = all_combos[:total_friendships//2]
+
+        for friend in all_combos:
+            self.addFriendship(friend[0], friend[1])
 
     def getAllSocialPaths(self, userID):
         """
@@ -61,6 +98,30 @@ class SocialGraph:
         """
         visited = {}  # Note that this is a dictionary, not a set
         # !!!! IMPLEMENT ME
+        # bfs to make sure every path is traced
+        
+        # Create an empty Queue and enqueue A PATH TO the starting vertex
+        q = Queue()
+        q.enqueue([userID])
+        path = [userID]
+
+        # While the queue is not empty...
+        while q.size() > 0:
+            # Dequeue the first PATH
+            v = q.dequeue()
+            # GRAB THE VERTEX FROM THE END OF THE PATH
+            if v[-1] not in visited:
+                # Mark it as visited
+                visited[v[-1]] = v
+                # Then add A PATH TO all of its neighbors to the back of the queue
+                for friend in self.friendships[v[-1]]:
+                    # Copy the path
+                    path = v.copy()
+                    # Append friend to the back of the copy
+                    path.append(friend)
+                    # Enqueue copy
+                    q.enqueue(path)
+
         return visited
 
 
