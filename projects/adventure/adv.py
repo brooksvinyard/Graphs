@@ -17,6 +17,19 @@ class Stack():
     def size(self):
         return len(self.stack)
 
+class Queue():
+    def __init__(self):
+        self.queue = []
+    def enqueue(self, value):
+        self.queue.append(value)
+    def dequeue(self):
+        if self.size() > 0:
+            return self.queue.pop(0)
+        else:
+            return None
+    def size(self):
+        return len(self.queue)
+
 # Load world
 world = World()
 
@@ -44,21 +57,20 @@ maze_graph = {}
 def startMazeGraph():
     # Need to start to build a graph here
     # We put into the graph directions and the room number of the direction
-    # If we have a direction but no roomnumber, put a '?'
-    # print(player.currentRoom.id)
+    # If we have a direction but no room number, put a '?'
     maze_graph[player.currentRoom.id] = {}
     for exits in player.currentRoom.getExits():
         maze_graph[player.currentRoom.id][exits] = '?'
 
     return maze_graph
 
-def updateGraph(old_room, path, new_room):
+def updateGraph(starting_room, path, new_room):
     print("\nUPDATE GRAPH FUNCTION")
 
-    # Make connection to the this room and opposite connection to the last room
-    maze_graph[old_room][path] = new_room
+    # Make connection to the new_room and opposite connection to the starting_room
+    maze_graph[starting_room][path] = new_room
 
-    if path == 'n': opposite_path = 's'    
+    if   path == 'n': opposite_path = 's'    
     elif path == 's': opposite_path = 'n'
     elif path == 'e': opposite_path = 'w'
     elif path == 'w': opposite_path = 'e'
@@ -72,82 +84,76 @@ def updateGraph(old_room, path, new_room):
             maze_graph[new_room][exits] = '?'
 
     # Make connection to the previous room
-    maze_graph[new_room][opposite_path] = old_room
+    maze_graph[new_room][opposite_path] = starting_room
 
-    return maze_graph
 
 # Travel Function
 def travel(traversalPath):
     print("\nTRAVEL FUNCTION")
-    # start in a room
-    old_room = player.currentRoom.id
+    completed_rooms.add(player.currentRoom)
 
-    # Prefer to travel in unknown direction if I have neen to the room before
-    if player.currentRoom.id in maze_graph.keys(): # I have been there before
-        if '?' in maze_graph[player.currentRoom.id].values(): # unexplored rooms exits
-            for exits in maze_graph[player.currentRoom.id]:
-                if maze_graph[player.currentRoom.id][exits] is '?': # go to first unexplored room
-                    print("go'?': ", exits)
-                    next_path = exits
-                    break
-        else:
-            # Maybe I am done? search for '?'
-            deadEnd(player.currentRoom.id)
-            # random_path = random.sample(player.currentRoom.getExits(), 1)
-            # next_path = random_path[0]
-            print("already explored all: ")
-            maze_complete = True
-            return maze_complete
-
-    # choose a direction at random to travel from available exits
+    # Keep track of the starting room
+    starting_room = player.currentRoom.id
+    next_path = []
+    # Prefer to travel in unknown direction if I have been to the room before
+    if '?' in maze_graph[player.currentRoom.id].values(): # unexplored rooms exits
+        for exits in maze_graph[player.currentRoom.id]:
+            if maze_graph[player.currentRoom.id][exits] is '?': # go to first unexplored room
+                print("go'?': ", exits)
+                # next_path = exits
+                next_path.append(exits)
+                # break
     else:
+        # Maybe I am done? search for '?'
+        deadEnd(player.currentRoom.id)
         # random_path = random.sample(player.currentRoom.getExits(), 1)
         # next_path = random_path[0]
-        # print("else: already explored all ?", next_path)
+        print("already explored all: ")
         maze_complete = True
-        # break
         return maze_complete
 
     # Go to the next_path
+    random_path = random.sample(next_path, 1)
     print("TRAVELING:", next_path)
-    player.travel(next_path)
-    traversalPath.append(next_path)
+    # print("***************random path", random_path[0])
+    player.travel(random_path[0])
+    # player.travel(next_path)
+    traversalPath.append(random_path[0])
+    # traversalPath.append(next_path)
     new_room = player.currentRoom.id
 
     # Update the graph after traveling
-    updateGraph(old_room, next_path, new_room)
+    updateGraph(starting_room, random_path[0], new_room)
+    # updateGraph(starting_room, next_path, new_room)
 
     # If dead end: go to the last '?'
     # BFS for a '?'
     if len(player.currentRoom.getExits()) is 1:
         deadEnd(new_room)
 
-    # traversalPath.append(next_path)
-
-
-
 # Dead End
 # When reaching a dead end, need to backtrack to the last room with a '?'
 # perform a DFS to find a path to get back to that room
 def deadEnd(room):
     print("\nDEAD END room: ", room)
-    # print(maze_graph)
     # Create an empty set to store visited nodes
     visited = set()
     # Create an empty Queue and enqueue A PATH TO the starting vertex
-    s = Stack()
-    s.push([room])
+    # s = Stack()
+    s = Queue()
+    # s.push([room])
+    s.enqueue([room])
     # While the queue is not empty...
     while s.size() > 0:
         # Dequeue the first PATH
-        v = s.pop()
+        # v = s.pop()
+        v = s.dequeue()
 
         # IF We get to a '?' then go there!
         if v[-1] == '?':
             print("go to v", v)
-            v_path = v.copy()
-            s = Stack()
-            backtrack(v_path)
+            s = Stack() # Reset the Stack for next time
+            backtrack(v)
         # If that vertex has not been visited...
         elif v[-1] not in visited:
             # Mark it as visited
@@ -159,16 +165,14 @@ def deadEnd(room):
                 # Append neighbor to the back of the copy
                 path.append(neighbor)
                 # Enqueue copy
-                s.push(path)
-    
-    # Maybe I am done?
-    maze_complete = True
-    return maze_complete
+                # s.push(path)
+                s.enqueue(path)
 
 
 def backtrack(path):
     print("\nBacktrack down the given path")
     print("path: ", path)
+    completed_rooms.add(player.currentRoom)
 
     for i in range(len(path)-2):
         # for step in path:
@@ -181,46 +185,27 @@ def backtrack(path):
             # print("exits", exits)
             if maze_graph[current_room][exits] is next_room: # go to first unexplored room
                     print("go to ?", exits)
-                    # reverse the path we travel dows?
-                    # if path == 'n': opposite_path = 's'    
-                    # elif path == 's': opposite_path = 'n'
-                    # elif path == 'e': opposite_path = 'w'
-                    # elif path == 'w': opposite_path = 'e'
-
                     print("TRAVELING:", exits)
                     player.travel(exits)
                     traversalPath.append(exits)
 
         print("Backtrack next: ", maze_graph[current_room])
 
-        # if '?' in maze_graph[player.currentRoom.id].values(): # unexplored rooms exits
-        #     for exits in maze_graph[player.currentRoom.id]:
-        #         if maze_graph[player.currentRoom.id][exits] is '?': # go to first unexplored room
-        #             print("go to ?")
-        #             next_path = exits
-        #             break
 
 
 
 
 # End condition
-# How do we know we won?
-#   visited == len(roomGraph) 
-#   or maybe
-#   if exit dictionary has no '?'
-
 traversalPath = []
 startMazeGraph()
-i = 0
-while i < 2000:
-# while maze_complete == False:
+completed_rooms = set()
+
+while len(completed_rooms) < len(roomGraph):
     travel(traversalPath)
-    i += 1
 
 
 print("\n\n**************")
-# print("\ntraversalPath", traversalPath)
-# print("\nmaze_graph", maze_graph)
+print("\nlen(completed_rooms)", len(completed_rooms))
 print("\nlen(roomGraph)", len(roomGraph))
 print("\nlen(traversalPath)", len(traversalPath))
 
